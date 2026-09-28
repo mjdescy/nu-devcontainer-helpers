@@ -31,6 +31,17 @@ def devbox-enter [] {
         print "No running devcontainer found for the current folder"
         return
     }
-    # Enter the devcontainer using podman.
-    podman exec -it --user vscode $devbox bash
+
+    # Attempt to change to the project folder within the devcontainer.
+    # The project folder is in /workspaces inside the devcontainer and is the name of the project's root folder.
+    let container_info = (podman inspect $devbox | from json | first)
+    let local_folder = ($container_info.Config.Labels?."devcontainer.local_folder"? | default "")
+
+    if ($local_folder != "") {
+        let project_name = ($local_folder | path basename)
+        podman exec -it --workdir $"/workspaces/($project_name)" --user vscode $devbox bash
+    } else {
+        # Enter the devcontainer using podman.
+        podman exec -it --user vscode $devbox bash
+    }
 }
